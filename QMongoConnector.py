@@ -29,8 +29,11 @@ from PyQt5.QtWidgets import QAction
 from .resources import *
 # Import the code for the dialog
 from .QMongoConnector_dialog import QMongoDialog
+from qgis.core import *
+from qgis.gui import *
 import os.path
-
+import requests
+import json
 
 class QMongo:
     """QGIS Plugin Implementation."""
@@ -180,8 +183,27 @@ class QMongo:
                 self.tr(u'&Qgis-Mongo-Connector'),
                 action)
             self.iface.removeToolBarIcon(action)
-
-
+    
+    def getLayers(self):
+        data = requests.get('http://localhost:4000/pnt/layers/')
+        dtt=data.text.split('"')
+        dts=[]
+        for i in dtt:
+    	    if len(i) > 3 :
+                dts.append(i)
+        self.dlg.listWidget.addItems(dts)
+    
+    def loadLayer(self):
+        layer = self.dlg.listWidget.currentItem().text()
+        url = 'http://localhost:4000/pnt/all/'+layer
+        data_req = requests.get(url)
+        data_layer = data_req.json()
+        with open('xx.geojson','w+') as f:
+            json.dump(data_layer,f)
+        layer = QgsVectorLayer('xx.geojson',layer,'ogr')
+        QgsProject.instance().addMapLayers([layer])
+        
+        
     def run(self):
         """Run method that performs all the real work"""
 
@@ -194,9 +216,5 @@ class QMongo:
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass
+        self.dlg.pushButton.clicked.connect(self.getLayers)
+        self.dlg.listWidget.clicked.connect(self.loadLayer)
