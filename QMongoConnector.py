@@ -202,6 +202,17 @@ class QMongo:
             json.dump(data_layer,f)
         layer = QgsVectorLayer('xx.geojson',layer,'ogr')
         QgsProject.instance().addMapLayers([layer])
+
+    def RefreshLayers(self):
+        self.dlg.comboBox.clear()
+        self.dlg.comboBox.clear()
+        layers= self.iface.mapCanvas().layers()
+        names=[]
+        for lay in layers:
+            names.append(lay.name())
+        self.dlg.comboBox.addItems(names)
+
+
         
         
     def run(self):
@@ -218,3 +229,6 @@ class QMongo:
         # Run the dialog event loop
         self.dlg.pushButton.clicked.connect(self.getLayers)
         self.dlg.listWidget.clicked.connect(self.loadLayer)
+        self.dlg.pushButton_2.clicked.connect(self.RefreshLayers)
+
+        
