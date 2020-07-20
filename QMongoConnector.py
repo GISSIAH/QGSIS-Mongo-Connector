@@ -202,7 +202,38 @@ class QMongo:
             json.dump(data_layer,f)
         layer = QgsVectorLayer('xx.geojson',layer,'ogr')
         QgsProject.instance().addMapLayers([layer])
+    
+    def GetGeometry(self,layer):
+        if layer.wkbType()==QgsWkbTypes.Point:
+            return 'http://localhost:4000/pnt/entry'
 
+        if layer.wkbType()==QgsWkbTypes.MultiPoint:
+            return 'http://localhost:4000/pnt/entry'
+        
+
+        if layer.wkbType()==QgsWkbTypes.LineString:
+            return 'http://localhost:4000/ln/entry'
+
+
+        if layer.wkbType()==QgsWkbTypes.MultiLineString:
+            return 'http://localhost:4000/ln/entry'
+
+        if layer.wkbType()==QgsWkbTypes.Polygon:
+            return 'http://localhost:4000/ply/entry'
+
+        if layer.wkbType()==QgsWkbTypes.MultiPolygon:
+            return 'http://localhost:4000/ply/entry'
+        
+    def exportLayer(self):
+        for layer in self.iface.mapCanvas().layers():
+            if layer.name() == self.dlg.comboBox.currentText(): 
+                QgsVectorFileWriter.writeAsVectorFormat(layer,(layer.name()+'.geojson'),'UTF-8',layer.crs(),'GeoJSON')
+                url = self.GetGeometry(layer)
+                file_json = open(layer.name()+'.geojson','r')
+                layer_json = json.loads(file_json.read())
+                data_req = requests.post(url,json=layer_json)
+                
+        
     def RefreshLayers(self):
         self.dlg.comboBox.clear()
         self.dlg.comboBox.clear()
@@ -230,5 +261,5 @@ class QMongo:
         self.dlg.pushButton.clicked.connect(self.getLayers)
         self.dlg.listWidget.clicked.connect(self.loadLayer)
         self.dlg.pushButton_2.clicked.connect(self.RefreshLayers)
-
+        self.dlg.pushButton_3.clicked.connect(self.exportLayer)
         
