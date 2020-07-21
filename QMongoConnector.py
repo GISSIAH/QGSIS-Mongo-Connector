@@ -185,17 +185,44 @@ class QMongo:
             self.iface.removeToolBarIcon(action)
     
     def getLayers(self):
-        data = requests.get('http://localhost:4000/pnt/layers/')
-        dtt=data.text.split('"')
         dts=[]
-        for i in dtt:
+        self.dlg.listWidget.clear()
+        pn_data = requests.get('http://localhost:4000/pnt/layers/') 
+        l_data = requests.get('http://localhost:4000/ln/layers/')
+        pl_data = requests.get('http://localhost:4000/ply/layers/')
+
+        self.point=[]
+        self.line=[]
+        self.poly=[]
+        
+        for i in pn_data.text.split('"'):
     	    if len(i) > 3 :
                 dts.append(i)
+                self.point.append(i)
+
+        for i in l_data.text.split('"'):
+            if len(i) > 3 :
+                dts.append(i)
+                self.line.append(i)
+
+        
+        for i in pl_data.text.split('"'):
+            if len(i) > 3 :
+                dts.append(i)
+                self.poly.append(i)
         self.dlg.listWidget.addItems(dts)
     
+    def getRoute(self,name):
+        if name in self.point:
+            return 'http://localhost:4000/pnt/all/'+name
+        elif name in self.line:
+            return 'http://localhost:4000/ln/all/'+name
+        elif name in self.poly:
+            return 'http://localhost:4000/ply/all/'+name
+
     def loadLayer(self):
         layer = self.dlg.listWidget.currentItem().text()
-        url = 'http://localhost:4000/pnt/all/'+layer
+        url = self.getRoute(layer)
         data_req = requests.get(url)
         data_layer = data_req.json()
         with open('xx.geojson','w+') as f:
