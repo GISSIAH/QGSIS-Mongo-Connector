@@ -235,28 +235,40 @@ class QMongo:
     
     def GetGeometry(self,layer):
         if layer.wkbType()==QgsWkbTypes.Point:
-            return {'geom':'Point','url':'http://localhost:4000/pnt/entry'}
+            return {'geom':'Point','url':'http://localhost:4000/pnt/entry','raw':'http://localhost:4000/pnt/'}
 
         if layer.wkbType()==QgsWkbTypes.MultiPoint:
-            return {'geom':'Point','url':'http://localhost:4000/pnt/entry'}
+            return {'geom':'Point','url':'http://localhost:4000/pnt/entry','raw':'http://localhost:4000/pnt/'}
         
 
         if layer.wkbType()==QgsWkbTypes.LineString:
-            return {'geom':'LineString','url':'http://localhost:4000/ln/entry'}
+            return {'geom':'LineString','url':'http://localhost:4000/ln/entry','raw':'http://localhost:4000/ln/'}
 
 
         if layer.wkbType()==QgsWkbTypes.MultiLineString:
-            return {'geom':'MultiLineString','url':'http://localhost:4000/ln/entry'}
+            return {'geom':'MultiLineString','url':'http://localhost:4000/ln/entry','raw':'http://localhost:4000/ln/'}
 
         if layer.wkbType()==QgsWkbTypes.Polygon:
-            return {'geom':'Polygon','url':'http://localhost:4000/ply/entry'}
+            return {'geom':'Polygon','url':'http://localhost:4000/ply/entry','raw':'http://localhost:4000/ply/'}
 
         if layer.wkbType()==QgsWkbTypes.MultiPolygon:
-            return {'geom':'MultiPolygon','url':'http://localhost:4000/ply/entry'}
+            return {'geom':'MultiPolygon','url':'http://localhost:4000/ply/entry','raw':'http://localhost:4000/ply/'}
         
     def exportLayer(self):
         for layer in self.iface.mapCanvas().layers():
             if layer.name() == self.dlg.comboBox.currentText(): 
+                QgsVectorFileWriter.writeAsVectorFormat(layer,(layer.name()+'.geojson'),'UTF-8',layer.crs(),'GeoJSON')
+                url = self.GetGeometry(layer)['url']
+                file_json = open(layer.name()+'.geojson','r')
+                layer_json = json.loads(file_json.read())
+                data_req = requests.post(url,json=layer_json)
+
+    def updateLayer(self):
+        name=self.dlg.comboBox.currentText()
+        url=self.getRoute(name)
+        rq = requests.delete(url)
+        for layer in self.iface.mapCanvas().layers():
+            if layer.name() == name: 
                 QgsVectorFileWriter.writeAsVectorFormat(layer,(layer.name()+'.geojson'),'UTF-8',layer.crs(),'GeoJSON')
                 url = self.GetGeometry(layer)['url']
                 file_json = open(layer.name()+'.geojson','r')
@@ -292,3 +304,4 @@ class QMongo:
         self.dlg.listWidget.clicked.connect(self.loadLayer)
         self.dlg.pushButton_2.clicked.connect(self.RefreshLayers)
         self.dlg.pushButton_3.clicked.connect(self.exportLayer)
+        self.dlg.pushButton_4.clicked.connect(self.updateLayer)
