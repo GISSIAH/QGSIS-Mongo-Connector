@@ -11,7 +11,6 @@
         copyright            : (C) 2020 by ATTIC GIS Solutions
         email                : malunje69@gmail.com
  ***************************************************************************/
-
 /***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -40,7 +39,6 @@ class QMongo:
 
     def __init__(self, iface):
         """Constructor.
-
         :param iface: An interface instance that will be passed to this class
             which provides the hook by which you can manipulate the QGIS
             application at run time.
@@ -75,12 +73,9 @@ class QMongo:
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
-
         We implement this ourselves since we do not inherit QObject.
-
         :param message: String for translation.
         :type message: str, QString
-
         :returns: Translated version of message.
         :rtype: QString
         """
@@ -100,39 +95,29 @@ class QMongo:
         whats_this=None,
         parent=None):
         """Add a toolbar icon to the toolbar.
-
         :param icon_path: Path to the icon for this action. Can be a resource
             path (e.g. ':/plugins/foo/bar.png') or a normal file system path.
         :type icon_path: str
-
         :param text: Text that should be shown in menu items for this action.
         :type text: str
-
         :param callback: Function to be called when the action is triggered.
         :type callback: function
-
         :param enabled_flag: A flag indicating if the action should be enabled
             by default. Defaults to True.
         :type enabled_flag: bool
-
         :param add_to_menu: Flag indicating whether the action should also
             be added to the menu. Defaults to True.
         :type add_to_menu: bool
-
         :param add_to_toolbar: Flag indicating whether the action should also
             be added to the toolbar. Defaults to True.
         :type add_to_toolbar: bool
-
         :param status_tip: Optional text to show in a popup when mouse pointer
             hovers over the action.
         :type status_tip: str
-
         :param parent: Parent widget for the new action. Defaults None.
         :type parent: QWidget
-
         :param whats_this: Optional text to show in the status bar when the
             mouse pointer hovers over the action.
-
         :returns: The action that was created. Note that the action is also
             added to self.actions list.
         :rtype: QAction
@@ -220,6 +205,23 @@ class QMongo:
         elif name in self.poly:
             return 'http://localhost:4000/ply/all/'+name
 
+    def createTempLayer(self,layer):
+        crs=layer.crs().postgisSrid()
+        geom = self.GetGeometry(layer)['geom']
+        crt=geom+'?crs='+str(crs)
+        new_layer = QgsVectorLayer(crt,layer.name(),'memory')
+        new_layer.startEditing()
+        fs=layer.dataProvider().fields()
+        new_layer.dataProvider().addAttributes(fs)
+        new_layer.commitChanges()
+        self.addFeatures(new_layer,layer.getFeatures())
+        return new_layer
+
+    def addFeatures(self,layer,fts):
+        layer.startEditing()
+        layer.dataProvider().addFeatures(fts)
+        layer.commitChanges()
+
     def loadLayer(self):
         layer = self.dlg.listWidget.currentItem().text()
         url = self.getRoute(layer)
@@ -228,34 +230,35 @@ class QMongo:
         with open('xx.geojson','w+') as f:
             json.dump(data_layer,f)
         layer = QgsVectorLayer('xx.geojson',layer,'ogr')
-        QgsProject.instance().addMapLayers([layer])
+        another_layer=self.createTempLayer(layer)
+        QgsProject.instance().addMapLayers([layer,another_layer])
     
     def GetGeometry(self,layer):
         if layer.wkbType()==QgsWkbTypes.Point:
-            return 'http://localhost:4000/pnt/entry'
+            return {'geom':'Point','url':'http://localhost:4000/pnt/entry'}
 
         if layer.wkbType()==QgsWkbTypes.MultiPoint:
-            return 'http://localhost:4000/pnt/entry'
+            return {'geom':'Point','url':'http://localhost:4000/pnt/entry'}
         
 
         if layer.wkbType()==QgsWkbTypes.LineString:
-            return 'http://localhost:4000/ln/entry'
+            return {'geom':'LineString','url':'http://localhost:4000/ln/entry'}
 
 
         if layer.wkbType()==QgsWkbTypes.MultiLineString:
-            return 'http://localhost:4000/ln/entry'
+            return {'geom':'MultiLineString','url':'http://localhost:4000/ln/entry'}
 
         if layer.wkbType()==QgsWkbTypes.Polygon:
-            return 'http://localhost:4000/ply/entry'
+            return {'geom':'Polygon','url':'http://localhost:4000/ply/entry'}
 
         if layer.wkbType()==QgsWkbTypes.MultiPolygon:
-            return 'http://localhost:4000/ply/entry'
+            return {'geom':'MultiPolygon','url':'http://localhost:4000/ply/entry'}
         
     def exportLayer(self):
         for layer in self.iface.mapCanvas().layers():
             if layer.name() == self.dlg.comboBox.currentText(): 
                 QgsVectorFileWriter.writeAsVectorFormat(layer,(layer.name()+'.geojson'),'UTF-8',layer.crs(),'GeoJSON')
-                url = self.GetGeometry(layer)
+                url = self.GetGeometry(layer)['url']
                 file_json = open(layer.name()+'.geojson','r')
                 layer_json = json.loads(file_json.read())
                 data_req = requests.post(url,json=layer_json)
@@ -289,4 +292,3 @@ class QMongo:
         self.dlg.listWidget.clicked.connect(self.loadLayer)
         self.dlg.pushButton_2.clicked.connect(self.RefreshLayers)
         self.dlg.pushButton_3.clicked.connect(self.exportLayer)
-        
